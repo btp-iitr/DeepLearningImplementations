@@ -60,7 +60,13 @@ def train(**kwargs):
         opt_discriminator = Adam(lr=1E-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 
         # Load generator model
-        generator_model = models.load("generator_unet_%s" % generator,
+        # generator_model = models.load("generator_unet_upsampling",
+        #                               img_dim,
+        #                               nb_patch,
+        #                               bn_mode,
+        #                               use_mbd,
+        #                               batch_size)
+        generator_model = models.load("generator_fire_upsampling",
                                       img_dim,
                                       nb_patch,
                                       bn_mode,

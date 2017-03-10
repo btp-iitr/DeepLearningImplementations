@@ -21,32 +21,6 @@ def lambda_output(input_shape):
     return input_shape[:2]
 
 
-# def conv_block_unet(x, f, name, bn_mode, bn_axis, bn=True, dropout=False, subsample=(2,2)):
-
-#     x = Convolution2D(f, 3, 3, subsample=subsample, name=name, border_mode="same")(x)
-#     if bn:
-#         x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
-#     x = LeakyReLU(0.2)(x)
-#     if dropout:
-#         x = Dropout(0.5)(x)
-
-#     return x
-
-
-# def up_conv_block_unet(x1, x2, f, name, bn_mode, bn_axis, bn=True, dropout=False):
-
-#     x1 = UpSampling2D(size=(2, 2))(x1)
-#     x = merge([x1, x2], mode='concat', concat_axis=bn_axis)
-
-#     x = Convolution2D(f, 3, 3, name=name, border_mode="same")(x)
-#     if bn:
-#         x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
-#     x = Activation("relu")(x)
-#     if dropout:
-#         x = Dropout(0.5)(x)
-
-#     return x
-
 def conv_block_unet(x, f, name, bn_mode, bn_axis, bn=True, subsample=(2,2)):
 
     x = LeakyReLU(0.2)(x)
@@ -56,6 +30,44 @@ def conv_block_unet(x, f, name, bn_mode, bn_axis, bn=True, subsample=(2,2)):
 
     return x
 
+
+def conv_block_fire(x, f, name, bn_mode, bn_axis, bn=True, subsample=(2,2)):
+    print f, "lololo"
+    x = MaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2))(x)
+    x = Convolution2D(
+        f/8, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name=name)(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        f/2, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        f/2, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    return x
+
+
+def conv_block_god(x, f, name, bn_mode, bn_axis, bn=True, subsample=(2,2)):
+    print f, "lord"
+    x = Convolution2D(
+        f, 1, 1, subsample=subsample, activation='relu', init='glorot_uniform',
+        border_mode='same', name=name)(x)
+    # x = Convolution2D(
+    #     f/8, 1, 1, activation='relu', init='glorot_uniform',
+    #     border_mode='same', name=name)(x)
+    # x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    # e1 = Convolution2D(
+    #     f/2, 1, 1, activation='relu', init='glorot_uniform',
+    #     border_mode='same')(x)
+    # e2 = Convolution2D(
+    #     f/2, 3, 3, activation='relu', init='glorot_uniform',
+    #     border_mode='same')(x)
+    # x = merge(
+    #     [e1, e2], mode='concat', concat_axis=bn_axis)
+    return x
 
 def up_conv_block_unet(x, x2, f, name, bn_mode, bn_axis, bn=True, dropout=False):
 
@@ -70,14 +82,23 @@ def up_conv_block_unet(x, x2, f, name, bn_mode, bn_axis, bn=True, dropout=False)
 
     return x
 
-
-def deconv_block_unet(x, x2, f, h, w, batch_size, name, bn_mode, bn_axis, bn=True, dropout=False):
-
-    o_shape = (batch_size, h * 2, w * 2, f)
+def up_conv_block_fire(x, x2, f, name, bn_mode, bn_axis, bn=True, dropout=False):
+    print f, "upupup"
+    print x, x2
     x = Activation("relu")(x)
-    x = Deconvolution2D(f, 3, 3, output_shape=o_shape, subsample=(2, 2), border_mode="same")(x)
-    if bn:
-        x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    x = UpSampling2D(size=(2, 2))(x)
+    x = Convolution2D(
+        f/8, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name=name)(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        f/2, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        f/2, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
     if dropout:
         x = Dropout(0.5)(x)
     x = merge([x, x2], mode='concat', concat_axis=bn_axis)
@@ -85,10 +106,11 @@ def deconv_block_unet(x, x2, f, h, w, batch_size, name, bn_mode, bn_axis, bn=Tru
     return x
 
 
-def generator_unet_upsampling(img_dim, bn_mode, model_name="generator_unet_upsampling"):
+
+def generator_fire_upsampling(img_dim, bn_mode, model_name="generator_fire_upsampling"):
 
     nb_filters = 64
-
+    print "HIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"
     if K.image_dim_ordering() == "th":
         bn_axis = 1
         nb_channels = img_dim[0]
@@ -104,30 +126,38 @@ def generator_unet_upsampling(img_dim, bn_mode, model_name="generator_unet_upsam
     nb_conv = int(np.floor(np.log(min_s) / np.log(2)))
     list_nb_filters = [nb_filters * min(8, (2 ** i)) for i in range(nb_conv)]
 
+    last_god = list_nb_filters.pop()
+
     # Encoder
     list_encoder = [Convolution2D(list_nb_filters[0], 3, 3,
                                   subsample=(2, 2), name="unet_conv2D_1", border_mode="same")(unet_input)]
     for i, f in enumerate(list_nb_filters[1:]):
-        name = "unet_conv2D_%s" % (i + 2)
-        conv = conv_block_unet(list_encoder[-1], f, name, bn_mode, bn_axis)
+        name = "fire%s_squeeze" % (i + 2)
+        conv = conv_block_fire(list_encoder[-1], f, name, bn_mode, bn_axis)
         list_encoder.append(conv)
 
+    print list_encoder
+
+    conv = conv_block_god(list_encoder[-1], last_god, "conv", bn_mode, bn_axis)
+    list_encoder.append(conv)
+
     # Prepare decoder filters
-    list_nb_filters = list_nb_filters[:-2][::-1]
+    list_nb_filters = list_nb_filters[:-1][::-1]
     if len(list_nb_filters) < nb_conv - 1:
         list_nb_filters.append(nb_filters)
 
+
     # Decoder
-    list_decoder = [up_conv_block_unet(list_encoder[-1], list_encoder[-2],
-                                       list_nb_filters[0], "unet_upconv2D_1", bn_mode, bn_axis, dropout=True)]
+    list_decoder = [up_conv_block_fire(list_encoder[-1], list_encoder[-2],
+                                       list_nb_filters[0], "unet_up_fire_1", bn_mode, bn_axis, dropout=True)]
     for i, f in enumerate(list_nb_filters[1:]):
-        name = "unet_upconv2D_%s" % (i + 2)
+        name = "unet_up_fire_%s" % (i + 2)
         # Dropout only on first few layers
         if i < 2:
             d = True
         else:
             d = False
-        conv = up_conv_block_unet(list_decoder[-1], list_encoder[-(i + 3)], f, name, bn_mode, bn_axis, dropout=d)
+        conv = up_conv_block_fire(list_decoder[-1], list_encoder[-(i + 3)], f, name, bn_mode, bn_axis, dropout=d)
         list_decoder.append(conv)
 
     x = Activation("relu")(list_decoder[-1])
@@ -140,62 +170,161 @@ def generator_unet_upsampling(img_dim, bn_mode, model_name="generator_unet_upsam
     return generator_unet
 
 
-def generator_unet_deconv(img_dim, bn_mode, batch_size, model_name="generator_unet_deconv"):
+#
+# def generator_unet_upsampling(img_dim, bn_mode, model_name="generator_unet_upsampling"):
+#
+#     nb_filters = 64
+#
+#     if K.image_dim_ordering() == "th":
+#         bn_axis = 1
+#         nb_channels = img_dim[0]
+#         min_s = min(img_dim[1:])
+#     else:
+#         bn_axis = -1
+#         nb_channels = img_dim[-1]
+#         min_s = min(img_dim[:-1])
+#
+#     unet_input = Input(shape=img_dim, name="unet_input")
+#
+#     # Prepare encoder filters
+#     nb_conv = int(np.floor(np.log(min_s) / np.log(2)))
+#     list_nb_filters = [nb_filters * min(8, (2 ** i)) for i in range(nb_conv)]
+#
+#     # Encoder
+#     list_encoder = [Convolution2D(list_nb_filters[0], 3, 3,
+#                                   subsample=(2, 2), name="unet_conv2D_1", border_mode="same")(unet_input)]
+#     for i, f in enumerate(list_nb_filters[1:]):
+#         name = "unet_conv2D_%s" % (i + 2)
+#         conv = conv_block_unet(list_encoder[-1], f, name, bn_mode, bn_axis)
+#         list_encoder.append(conv)
+#
+#     # Prepare decoder filters
+#     list_nb_filters = list_nb_filters[:-2][::-1]
+#     if len(list_nb_filters) < nb_conv - 1:
+#         list_nb_filters.append(nb_filters)
+#
+#     # Decoder
+#     list_decoder = [up_conv_block_unet(list_encoder[-1], list_encoder[-2],
+#                                        list_nb_filters[0], "unet_upconv2D_1", bn_mode, bn_axis, dropout=True)]
+#     for i, f in enumerate(list_nb_filters[1:]):
+#         name = "unet_upconv2D_%s" % (i + 2)
+#         # Dropout only on first few layers
+#         if i < 2:
+#             d = True
+#         else:
+#             d = False
+#         conv = up_conv_block_unet(list_decoder[-1], list_encoder[-(i + 3)], f, name, bn_mode, bn_axis, dropout=d)
+#         list_decoder.append(conv)
+#
+#     x = Activation("relu")(list_decoder[-1])
+#     x = UpSampling2D(size=(2, 2))(x)
+#     x = Convolution2D(nb_channels, 3, 3, name="last_conv", border_mode="same")(x)
+#     x = Activation("tanh")(x)
+#
+#     generator_unet = Model(input=[unet_input], output=[x])
+#
+#     return generator_unet
 
-    assert K.backend() == "tensorflow", "Not implemented with theano backend"
-
-    nb_filters = 64
-    bn_axis = -1
-    h, w, nb_channels = img_dim
-    min_s = min(img_dim[:-1])
-
-    unet_input = Input(shape=img_dim, name="unet_input")
-
-    # Prepare encoder filters
-    nb_conv = int(np.floor(np.log(min_s) / np.log(2)))
-    list_nb_filters = [nb_filters * min(8, (2 ** i)) for i in range(nb_conv)]
-
-    # Encoder
-    list_encoder = [Convolution2D(list_nb_filters[0], 3, 3,
-                                  subsample=(2, 2), name="unet_conv2D_1", border_mode="same")(unet_input)]
-    # update current "image" h and w
-    h, w = h / 2, w / 2
-    for i, f in enumerate(list_nb_filters[1:]):
-        name = "unet_conv2D_%s" % (i + 2)
-        conv = conv_block_unet(list_encoder[-1], f, name, bn_mode, bn_axis)
-        list_encoder.append(conv)
-        h, w = h / 2, w / 2
-
-    # Prepare decoder filters
-    list_nb_filters = list_nb_filters[:-1][::-1]
-    if len(list_nb_filters) < nb_conv - 1:
-        list_nb_filters.append(nb_filters)
-
-    # Decoder
-    list_decoder = [deconv_block_unet(list_encoder[-1], list_encoder[-2],
-                                      list_nb_filters[0], h, w, batch_size,
-                                      "unet_upconv2D_1", bn_mode, bn_axis, dropout=True)]
-    h, w = h * 2, w * 2
-    for i, f in enumerate(list_nb_filters[1:]):
-        name = "unet_upconv2D_%s" % (i + 2)
-        # Dropout only on first few layers
-        if i < 2:
-            d = True
-        else:
-            d = False
-        conv = deconv_block_unet(list_decoder[-1], list_encoder[-(i + 3)], f, h,
-                                 w, batch_size, name, bn_mode, bn_axis, dropout=d)
-        list_decoder.append(conv)
-        h, w = h * 2, w * 2
-
-    x = Activation("relu")(list_decoder[-1])
-    o_shape = (batch_size,) + img_dim
-    x = Deconvolution2D(nb_channels, 3, 3, output_shape=o_shape, subsample=(2, 2), border_mode="same")(x)
-    x = Activation("tanh")(x)
-
-    generator_unet = Model(input=[unet_input], output=[x])
-
-    return generator_unet
+#
+# def generator_unet_upsampling_fire(img_dim, bn_mode, model_name="generator_unet_upsampling"):
+#
+#     nb_filters = 64
+#
+#     if K.image_dim_ordering() == "th":
+#         bn_axis = 1
+#         nb_channels = img_dim[0]
+#         min_s = min(img_dim[1:])
+#     else:
+#         bn_axis = -1
+#         nb_channels = img_dim[-1]
+#         min_s = min(img_dim[:-1])
+#
+#     unet_input = Input(shape=img_dim, name="unet_input")
+#     conv1 = Convolution2D(64, 3, 3, border_mode='same', subsample=(2, 2), name="unet_conv2D_1", input_shape=(3, 256, 256))(unet_input)
+#
+#     maxpool1 = MaxPooling2D(
+#         pool_size=(3, 3), strides=(2, 2), name='maxpool1',)(conv1)
+#     fire1_squeeze = Convolution2D(
+#         16, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire1_squeeze')(maxpool1)
+#     bn1 = BatchNormalization(mode=bn_mode, axis=bn_axis, name="bn1")(fire1_squeeze)
+#     fire1_expand1 = Convolution2D(
+#         64, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire1_expand1')(bn1)
+#     fire1_expand2 = Convolution2D(
+#         64, 3, 3, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire1_expand2')(bn1)
+#     merge1_fire = merge(
+#         [fire1_expand1, fire1_expand2], mode='concat', concat_axis=bn_axis)
+#
+#     maxpool2 = MaxPooling2D(
+#         pool_size=(3, 3), strides=(2, 2), name='maxpool2',)(merge1_fire)
+#     fire2_squeeze = Convolution2D(
+#         32, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire2_squeeze')(maxpool2)
+#     bn2 = BatchNormalization(mode=bn_mode, axis=bn_axis, name="bn2")(fire2_squeeze)
+#     fire2_expand1 = Convolution2D(
+#         128, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire2_expand1')(bn2)
+#     fire2_expand2 = Convolution2D(
+#         128, 3, 3, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire2_expand2')(bn2)
+#     merge2_fire = merge(
+#         [fire2_expand1, fire2_expand2], mode='concat', concat_axis=bn_axis)
+#
+#     maxpool3 = MaxPooling2D(
+#         pool_size=(3, 3), strides=(2, 2), name='maxpool3',)(merge2_fire)
+#     fire3_squeeze = Convolution2D(
+#         64, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire3_squeeze')(maxpool3)
+#     bn3 = BatchNormalization(mode=bn_mode, axis=bn_axis, name="bn3")(fire3_squeeze)
+#     fire3_expand1 = Convolution2D(
+#         256, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire3_expand1')(bn3)
+#     fire3_expand2 = Convolution2D(
+#         256, 3, 3, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire3_expand2')(bn3)
+#     merge3_fire = merge(
+#         [fire3_expand1, fire3_expand2], mode='concat', concat_axis=bn_axis)
+#
+#     maxpool4 = MaxPooling2D(
+#         pool_size=(3, 3), strides=(2, 2), name='maxpool2',)(merge3_fire)
+#     fire4_squeeze = Convolution2D(
+#         64, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_squeeze')(maxpool4)
+#     bn4 = BatchNormalization(mode=bn_mode, axis=bn_axis, name="bn4")(fire4_squeeze)
+#     fire4_expand1 = Convolution2D(
+#         256, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_expand1')(bn4)
+#     fire4_expand2 = Convolution2D(
+#         256, 3, 3, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_expand2')(bn4)
+#     merge4_fire = merge(
+#         [fire4_expand1, fire4_expand2], mode='concat', concat_axis=bn_axis)
+#
+#     maxpool5 = MaxPooling2D(
+#         pool_size=(3, 3), strides=(2, 2), name='maxpool5',)(merge4_fire)
+#     fire5_squeeze = Convolution2D(
+#         64, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_squeeze')(maxpool5)
+#     bn5 = BatchNormalization(mode=bn_mode, axis=bn_axis, name="bn5")(fire5_squeeze)
+#     fire5_expand1 = Convolution2D(
+#         256, 1, 1, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_expand1')(bn5)
+#     fire5_expand2 = Convolution2D(
+#         256, 3, 3, activation='relu', init='glorot_uniform',
+#         border_mode='same', name='fire4_expand2')(bn5)
+#     merge5_fire = merge(
+#         [fire5_expand1, fire5_expand2], mode='concat', concat_axis=bn_axis)
+#
+#     x = Activation("relu")(list_decoder[-1])
+#     x = UpSampling2D(size=(2, 2))(x)
+#     x = Convolution2D(nb_channels, 3, 3, name="last_conv", border_mode="same")(x)
+#     x = Activation("tanh")(x)
+#
+#     generator_unet = Model(input=[unet_input], output=[x])
+#
+#     return generator_unet
 
 
 def DCGAN_discriminator(img_dim, nb_patch, bn_mode, model_name="DCGAN_discriminator", use_mbd=True):
@@ -221,16 +350,45 @@ def DCGAN_discriminator(img_dim, nb_patch, bn_mode, model_name="DCGAN_discrimina
 
     # First conv
     x_input = Input(shape=img_dim, name="discriminator_input")
-    x = Convolution2D(list_filters[0], 3, 3, subsample=(2, 2), name="disc_conv2d_1", border_mode="same")(x_input)
+    # x = Convolution2D(list_filters[0], 3, 3, subsample=(2, 2), name="disc_conv2d_1", border_mode="same")(x_input)
+    # x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    # x = LeakyReLU(0.2)(x)
+
+    x = MaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2))(x_input)
+    x = Convolution2D(
+        list_filters[0]/8, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='disc_conv2d_1')(x)
     x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
-    x = LeakyReLU(0.2)(x)
+    e1 = Convolution2D(
+        list_filters[0]/2, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        list_filters[0]/2, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
 
     # Next convs
     for i, f in enumerate(list_filters[1:]):
-        name = "disc_conv2d_%s" % (i + 2)
-        x = Convolution2D(f, 3, 3, subsample=(2, 2), name=name, border_mode="same")(x)
+        name = "disc_conv2d_fire_%s" % (i + 2)
+        # x = Convolution2D(f, 3, 3, subsample=(2, 2), name=name, border_mode="same")(x)
+        # x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+        # x = LeakyReLU(0.2)(x)
+        x = MaxPooling2D(
+            pool_size=(2, 2), strides=(2, 2))(x)
+        x = Convolution2D(
+            f/8, 1, 1, activation='relu', init='glorot_uniform',
+            border_mode='same', name=name)(x)
         x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
-        x = LeakyReLU(0.2)(x)
+        e1 = Convolution2D(
+            f/2, 1, 1, activation='relu', init='glorot_uniform',
+            border_mode='same')(x)
+        e2 = Convolution2D(
+            f/2, 3, 3, activation='relu', init='glorot_uniform',
+            border_mode='same')(x)
+        x = merge(
+            [e1, e2], mode='concat', concat_axis=bn_axis)
 
     x_flat = Flatten()(x)
     x = Dense(2, activation='softmax', name="disc_dense")(x_flat)
@@ -313,8 +471,8 @@ def load(model_name, img_dim, nb_patch, bn_mode, use_mbd, batch_size):
         plot(model, to_file='../../figures/%s.png' % model_name, show_shapes=True, show_layer_names=True)
         return model
 
-    if model_name == "generator_unet_deconv":
-        model = generator_unet_deconv(img_dim, bn_mode, batch_size, model_name=model_name)
+    if model_name == "generator_fire_upsampling":
+        model = generator_fire_upsampling(img_dim, bn_mode, model_name=model_name)
         print model.summary()
         from keras.utils.visualize_util import plot
         plot(model, to_file='../../figures/%s.png' % model_name, show_shapes=True, show_layer_names=True)
