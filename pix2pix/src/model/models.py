@@ -169,6 +169,294 @@ def generator_fire_upsampling(img_dim, bn_mode, model_name="generator_fire_upsam
 
     return generator_unet
 
+def generator_fire_squeezenet_reverse(img_dim, bn_mode, model_name="generator_fire_squeezenet_reverse"):
+    nb_filters = 64
+
+    if K.image_dim_ordering() == "th":
+        bn_axis = 1
+        nb_channels = img_dim[0]
+        min_s = min(img_dim[1:])
+    else:
+        bn_axis = -1
+        nb_channels = img_dim[-1]
+        min_s = min(img_dim[:-1])
+
+    # Copied from squeezenet keras github
+    unet_input = Input(shape=img_dim, name="unet_input")
+    conv1 = Convolution2D(
+        96, 7, 7, activation='relu', init='glorot_uniform',
+        subsample=(2, 2), border_mode='same', name='conv1')(unet_input)
+    maxpool1 = MaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2), name='maxpool1')(conv1)
+    fire2_squeeze = Convolution2D(
+        16, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire2_squeeze')(maxpool1)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire2_squeeze)
+    fire2_expand1 = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire2_expand1')(x)
+    fire2_expand2 = Convolution2D(
+        64, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire2_expand2')(x)
+    merge2 = merge([fire2_expand1, fire2_expand2], mode='concat', concat_axis=bn_axis)
+
+    fire3_squeeze = Convolution2D(
+        16, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire3_squeeze')(merge2)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire3_squeeze)
+    fire3_expand1 = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire3_expand1')(x)
+    fire3_expand2 = Convolution2D(
+        64, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire3_expand2',
+        )(x)
+    merge3 = merge([fire3_expand1, fire3_expand2], mode='concat', concat_axis=bn_axis)
+
+    fire4_squeeze = Convolution2D(
+        32, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire4_squeeze')(merge3)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire4_squeeze)
+    fire4_expand1 = Convolution2D(
+        128, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire4_expand1',
+        )(x)
+    fire4_expand2 = Convolution2D(
+        128, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire4_expand2',
+        )(x)
+    merge4 = merge([fire4_expand1, fire4_expand2], mode='concat', concat_axis=bn_axis)
+    maxpool4 = MaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2), name='maxpool4',
+        )(merge4)
+
+    fire5_squeeze = Convolution2D(
+        32, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire5_squeeze',
+        )(maxpool4)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire5_squeeze)
+    fire5_expand1 = Convolution2D(
+        128, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire5_expand1',
+        )(x)
+    fire5_expand2 = Convolution2D(
+        128, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire5_expand2',
+        )(x)
+    merge5 = merge([fire5_expand1, fire5_expand2], mode='concat', concat_axis=bn_axis)
+
+    fire6_squeeze = Convolution2D(
+        48, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire6_squeeze',
+        )(merge5)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire6_squeeze)
+    fire6_expand1 = Convolution2D(
+        192, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire6_expand1',
+        )(x)
+    fire6_expand2 = Convolution2D(
+        192, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire6_expand2',
+        )(x)
+    merge6 = merge([fire6_expand1, fire6_expand2], mode='concat', concat_axis=bn_axis)
+
+    fire7_squeeze = Convolution2D(
+        48, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire7_squeeze',
+        )(merge6)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire7_squeeze)
+    fire7_expand1 = Convolution2D(
+        192, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire7_expand1',
+        )(x)
+    fire7_expand2 = Convolution2D(
+        192, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire7_expand2',
+        )(x)
+    merge7 = merge([fire7_expand1, fire7_expand2], mode='concat', concat_axis=bn_axis)
+
+    fire8_squeeze = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire8_squeeze',
+        )(merge7)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire8_squeeze)
+    fire8_expand1 = Convolution2D(
+        256, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire8_expand1',
+        )(x)
+    fire8_expand2 = Convolution2D(
+        256, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire8_expand2',
+        )(x)
+    merge8 = merge([fire8_expand1, fire8_expand2], mode='concat', concat_axis=bn_axis)
+
+    maxpool8 = MaxPooling2D(
+        pool_size=(2, 2), strides=(2, 2), name='maxpool8',
+        )(merge8)
+    fire9_squeeze = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire9_squeeze',
+        )(maxpool8)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(fire9_squeeze)
+    fire9_expand1 = Convolution2D(
+        256, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire9_expand1',
+        )(x)
+    fire9_expand2 = Convolution2D(
+        256, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same', name='fire9_expand2',
+        )(x)
+    merge9 = merge([fire9_expand1, fire9_expand2], mode='concat', concat_axis=bn_axis)
+    print(merge9)
+
+    x = Dropout(0.5, name='fire9_dropout')(merge9)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        256, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        256, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge9], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = UpSampling2D(size=(2, 2))(x)
+    x = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        256, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        256, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge8], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        48, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        192, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        192, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge7], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        48, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        192, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        192, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge6], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        32, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        128, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        128, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge5], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = UpSampling2D(size=(2, 2))(x)
+    x = Convolution2D(
+        32, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        128, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        128, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge4], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        16, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        64, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge3], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = Convolution2D(
+        16, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = BatchNormalization(mode=bn_mode, axis=bn_axis)(x)
+    e1 = Convolution2D(
+        64, 1, 1, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    e2 = Convolution2D(
+        64, 3, 3, activation='relu', init='glorot_uniform',
+        border_mode='same')(x)
+    x = merge(
+        [e1, e2], mode='concat', concat_axis=bn_axis)
+    # if dropout:
+    #     x = Dropout(0.5)(x)
+    x = merge([x, merge2], mode='concat', concat_axis=bn_axis)
+
+    x = Activation("relu")(x)
+    x = UpSampling2D(size=(4, 4))(x)
+    x = Convolution2D(nb_channels, 3, 3, name="last", border_mode="same")(x)
+    x = Activation("tanh")(x)
+
+    generator_fire_squeezenet = Model(input=[unet_input], output=[x])
+    return generator_fire_squeezenet
+
 
 #
 # def generator_unet_upsampling(img_dim, bn_mode, model_name="generator_unet_upsampling"):
@@ -473,6 +761,13 @@ def load(model_name, img_dim, nb_patch, bn_mode, use_mbd, batch_size):
 
     if model_name == "generator_fire_upsampling":
         model = generator_fire_upsampling(img_dim, bn_mode, model_name=model_name)
+        print model.summary()
+        from keras.utils.visualize_util import plot
+        plot(model, to_file='../../figures/%s.png' % model_name, show_shapes=True, show_layer_names=True)
+        return model
+
+    if model_name == "generator_fire_squeezenet_reverse":
+        model = generator_fire_squeezenet_reverse(img_dim, bn_mode, model_name=model_name)
         print model.summary()
         from keras.utils.visualize_util import plot
         plot(model, to_file='../../figures/%s.png' % model_name, show_shapes=True, show_layer_names=True)

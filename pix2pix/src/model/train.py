@@ -66,7 +66,13 @@ def train(**kwargs):
         #                               bn_mode,
         #                               use_mbd,
         #                               batch_size)
-        generator_model = models.load("generator_fire_upsampling",
+        # generator_model = models.load("generator_fire_upsampling",
+        #                               img_dim,
+        #                               nb_patch,
+        #                               bn_mode,
+        #                               use_mbd,
+        #                               batch_size)
+        generator_model = models.load("generator_fire_squeezenet_reverse",
                                       img_dim,
                                       nb_patch,
                                       bn_mode,
