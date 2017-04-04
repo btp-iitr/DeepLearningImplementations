@@ -13,8 +13,8 @@ import data_utils
 
 
 def l1_loss(y_true, y_pred):
-    return K.sum(K.abs(y_pred - y_true), axis=-1)
-
+    #return K.sum(K.abs(y_pred - y_true), axis=-1)
+    return 0
 
 def train(**kwargs):
     """
@@ -46,7 +46,10 @@ def train(**kwargs):
     general_utils.setup_logging(model_name)
 
     # Load and rescale data
-    X_full_train, X_sketch_train, X_full_val, X_sketch_val = data_utils.load_data(dset, image_dim_ordering)
+    X_full_train, X_sketch_train, X_full_val, X_sketch_val = data_utils.load_data(dset, image_dim_ordering) # Initial order, going from ???
+    # For reverse
+    X_full_train, X_sketch_train = X_sketch_train, X_full_train
+    X_full_val, X_sketch_val = X_sketch_val, X_full_val
     img_dim = X_full_train.shape[-3:]
 
     # Get the number of non overlapping patch and the size of input image to the discriminator
@@ -57,7 +60,8 @@ def train(**kwargs):
         # Create optimizers
         opt_dcgan = Adam(lr=1E-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
         # opt_discriminator = SGD(lr=1E-3, momentum=0.9, nesterov=True)
-        opt_discriminator = Adam(lr=1E-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+        opt_generator = Adam(lr=1E-3, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+        opt_discriminator = Adam(lr=1E-2, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
 
         # Load generator model
         # generator_model = models.load("generator_unet_upsampling",
@@ -66,18 +70,24 @@ def train(**kwargs):
         #                               bn_mode,
         #                               use_mbd,
         #                               batch_size)
-        # generator_model = models.load("generator_fire_upsampling",
-        #                               img_dim,
-        #                               nb_patch,
-        #                               bn_mode,
-        #                               use_mbd,
-        #                               batch_size)
-        generator_model = models.load("generator_fire_squeezenet_reverse",
+        generator_model = models.load("generator_fire_upsampling",
                                       img_dim,
                                       nb_patch,
                                       bn_mode,
                                       use_mbd,
                                       batch_size)
+        # generator_model = models.load("generator_fire_squeezenet_reverse",
+        #                               img_dim,
+        #                               nb_patch,
+        #                               bn_mode,
+        #                               use_mbd,
+        #                               batch_size)
+        # generator_model = models.load("generator_bullshit",
+        #                               img_dim,
+        #                               nb_patch,
+        #                               bn_mode,
+        #                               use_mbd,
+        #                               batch_size)
         # Load discriminator model
         discriminator_model = models.load("DCGAN_discriminator",
                                           img_dim_disc,
@@ -86,7 +96,7 @@ def train(**kwargs):
                                           use_mbd,
                                           batch_size)
 
-        generator_model.compile(loss='mae', optimizer=opt_discriminator)
+        generator_model.compile(loss='mae', optimizer=opt_generator)
         discriminator_model.trainable = False
 
         DCGAN_model = models.DCGAN(generator_model,
@@ -146,13 +156,15 @@ def train(**kwargs):
                                                 ("G logloss", gen_loss[2])])
 
                 # Save images for visualization
+                # The images are in the order of input, output, ground truth
                 if batch_counter % (n_batch_per_epoch / 2) == 0:
+                    # print "Saving images for visualization"
                     # Get new images from validation
                     data_utils.plot_generated_batch(X_full_batch, X_sketch_batch, generator_model,
-                                                    batch_size, image_dim_ordering, "training")
+                                                    batch_size, image_dim_ordering, str(e)+"_"+str(batch_counter)+"training")
                     X_full_batch, X_sketch_batch = next(data_utils.gen_batch(X_full_val, X_sketch_val, batch_size))
                     data_utils.plot_generated_batch(X_full_batch, X_sketch_batch, generator_model,
-                                                    batch_size, image_dim_ordering, "validation")
+                                                    batch_size, image_dim_ordering, str(e)+"_"+str(batch_counter)+"validation")
 
                 if batch_counter >= n_batch_per_epoch:
                     break
@@ -160,7 +172,7 @@ def train(**kwargs):
             print("")
             print('Epoch %s/%s, Time: %s' % (e + 1, nb_epoch, time.time() - start))
 
-            if e % 5 == 0:
+            if e % 50 == 0:
                 gen_weights_path = os.path.join('../../models/%s/gen_weights_epoch%s.h5' % (model_name, e))
                 generator_model.save_weights(gen_weights_path, overwrite=True)
 
