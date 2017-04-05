@@ -40,5 +40,5 @@ for i in range(len(filenames)):
     gray_img = rgb2gray(color_img)
     gray_img = gray2rgb(gray_img)
     su = concat_images(gray_img, color_img)
-    plt.imsave("summary/" + '%04d'%i, su)
+    plt.imsave("summary/" + '%04d'%i, su, format='jpg')
     print ("saved " + str(i))
