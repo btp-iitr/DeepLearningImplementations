@@ -6,8 +6,8 @@ from collections import deque
 wb = open_workbook('data.xlsx')  # file containing the data
 r_score = []           # stores the overall score of an individual on real images(1D)
 f_score = []           # stores the overall score of an individual on generated images(1D)
-r_image = []           # stores the scores given by different individuals to each real image(2D) 
-f_image = []           # stores the scores given by different individuals to each generated image(2D)
+r_image = []           # stores the probabilities given by different individuals to each real image(2D) 
+f_image = []           # stores the probabilities given by different individuals to each generated image(2D)
 ref = [1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 0]  # 1=real;0=generated
 real = deque()
 fake = deque()
